@@ -15,7 +15,7 @@
 		in order to maximize security.
 	</sum>
 	<sect>
-		<h>Theory</h>
+		<h>Overview</h>
 		<p>
 			Running many different applications, including many
 			that use network communication to perform their
@@ -29,8 +29,8 @@
 		</p>
 		<p>
 			One of the original, defining mottos of the Unix
-			culture was that of "do one thing well."  In fact,
-			that is why the name "Unix" was chosen after the
+			culture was that of ``do one thing well.''  In fact,
+			that is why the name ``Unix'' was chosen after the
 			disaster that was Multics.  Over the years, the
 			defining strategies that made Unix what it has
 			become have become lax.  The intent of this
@@ -70,8 +70,8 @@
 			This is a very effective strategy:  only data from
 			the child is communicated back to the main DHCP
 			process, and only the main process needs to run
-			as root (writing to files in /var, or listening on
-			UDP port 68 sockets, for example) and conduct a
+			as root (writing to files in <path>/var</path>, or
+			listening on UDP port 68 sockets, for example) and conduct a
 			minimal set of operations.  If an error in the code
 			occurs, there is a greater chance that it will be
 			in the code run by the unprivileged process, rather
@@ -83,7 +83,78 @@
 		</p>
 	</sect>
 	<sect>
-		<h>Practice</h>
+		<h>Examples</h>
+			<p>
+				First, a shadow account for the target user must be created.
+				On a particular system, such an account from
+				<path>/etc/passwd</path> looks like this:
+			</p>
+<pre>
+_jaredy:*:201:201:Jared J. Yanovich (privsep):/home/jaredy/.priv:/sbin/nologin
+</pre>
+			<p>
+				On systems that have both a master and shadow password file,
+				make sure both are updated.
+			</p>
+			<p>
+				A group that both the main and shadow user need to be a part of
+				needs to be created as well.
+				The following is an excerpt from <path>/etc/group</path>.
+			</p>
+<pre>
+_jaredy:*:201:jaredy
+</pre>
+			<p>
+				Next, <tt>sudo(8)</tt> needs to be configured to allow the main
+				user to invoke programs that run under the privileges of the
+				shadow account (but, obviously, not the other way around).
+				Such configuration may look like:
+			</p>
+<pre>
+jaredy _jaredy=(ALL) NOPASSWD: ALL
+</pre>
+			<p>
+				Remember to use the <tt>visudo(8)</tt> program when editing the
+				<path>sudoers</path> file.
+			</p>
+			<p>
+				Next, permissions on the shadow home directory need to be set up.
+<pre>
+# cd /home/jaredy
+# mkdir .priv
+# chmod 775 .priv
+# chown _jaredy:_jaredy .priv
+</pre>
+			</p>
+			<p>
+				Finally, a program can be invoked through <tt>sudo(8)</tt>:
+			</p>
+<pre>
+$ env HOME=~/.priv sudo -u _${USER} mozilla "$@"
+</pre>
+			<p>
+				Or more generically, a wrapper can be made to invoke any program
+				through a <em>privilege wrapper</em>, such as
+				<path>~/bin/priv</path>:
+			</p>
+<pre>
+#!/bin/sh
+
+prog=$1
+shift
+
+exec env HOME=~/.priv sudo -u _$USER $prog "$@"
+</pre>
+			<p>
+				And now this script can be used to simplify the invocation of
+				programs that are to have privileges separated.
+				Here is a sample excerpt from <path>~/.fluxbox/menu</path> that
+				allows easy invocation of an IRC client:
+			</p>
+<pre>
+[submenu] (Net)
+	[exec] (irssi) {xterm -title irssi -e ~/bin/priv irssi &amp;}
+[end]
+</pre>
 	</sect>
-	Details
 </doc>
