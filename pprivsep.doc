@@ -184,8 +184,8 @@ $ chmod 660 ~/.priv/.Xauthority
 </pre>
 			<p>
 				Now, whenever <tt>~/.xinitrc</tt> is run (presumably, whenever
-				an X session is starting), the X cookie will be copied so the
-				shadow account can contact the X server.
+				an X session is starting), the X cookie will be copied so that
+				the shadow account can contact the X server.
 			</p>
 	</sect>
 </doc>
