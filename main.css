@@ -1,0 +1,38 @@
+/* $Id$ */
+
+@media print {
+	body {
+		font-family: Garamond, serif;
+	}
+}
+
+@media screen {
+	body {
+		font-family: Tahoma, sans-serif;
+	}
+}
+
+pre, tt {
+	font-family: monospace;
+}
+			
+pre {
+	margin-left: 20px;
+	border: 1px solid #666666;
+	background-color: #EEEEFF;
+	padding: 3px;
+}
+
+hr {
+	height: 1px;
+	background-color: #666666;
+	border: 0px;
+}
+
+h3 {
+	color: #336699;
+}
+
+p {
+	text-align: justify;
+}
