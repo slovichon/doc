@@ -63,7 +63,7 @@
 		</p>
 	</sect>
 	<sect>
-		<h>Examples</h>
+		<h>Details</h>
 			<p>
 				First, a shadow account for the target user must be created.
 				On a particular system, such an account from
@@ -138,8 +138,8 @@ exec env HOME=~/.priv sudo -u _$USER $prog "$@"
 [end]
 </pre>
 			<p>
-				Likewise, here are some more samples from <tt>~/.bashrc</tt> that
-				ease invocation of such programs:
+				Likewise, here are some more samples from <path>~/.bashrc</path>
+				that ease invocation of such programs:
 			</p>
 <pre>
 alias gaim="~/bin/priv gaim"
@@ -155,6 +155,37 @@ alias gkrellm="~/bin/priv gkrellm"
 				Program such as text editors and argubly mail clients may be
 				used for so much file I/O that it will probably be infeasible
 				to set them up in this manner.
+			</p>
+			<p>
+				A problem arises when a program that runs in the shadow account
+				needs to contact an X server.  To do this, an X program calls
+				X routines which consult the file <path>~/.Xauthority</path> to
+				provide authorization information to the X server.  However,
+				this file will be only be the main account, and will be
+				read-only, hence the problem.
+			</p>
+			<p>
+				The solution is to create a copy of the
+				<path>~/.Xauthority</path> file when it is created that may be
+				used by the shadow account.  Note that doing this allows an
+				untrusted program to contact the X server, which will it allow
+				it to do potentially nasty actions.
+				The following is from <path>~/.xinitrc</path>:
+			</p>
+<pre>
+cp ~/.Xauthority ~/.priv
+</pre>
+			<p>
+				Next, this file must be set up properly, once:
+			</p>
+<pre>
+$ touch ~/.priv/.Xauthority
+$ chmod 660 ~/.priv/.Xauthority
+</pre>
+			<p>
+				Now, whenever <tt>~/.xinitrc</tt> is run (presumably, whenever
+				an X session is starting), the X cookie will be copied so the
+				shadow account can contact the X server.
 			</p>
 	</sect>
 </doc>
