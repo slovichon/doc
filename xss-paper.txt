@@ -1,0 +1,189 @@
+Mitigating XSS
+By Jared Yanovich <jaredy@closeedge.net>
+
+Part 0: Conventions
+
+A minimal amount of code to portrait a simple cross-site script will be used for examples. Such code looks like:
+
+	<script>alert()
+
+In situations where less will be needed (such as already being able to enter code into a <script> tag), even less will be used:
+
+	alert()
+
+It is assumed in such a situation that any script will allowed once such a point is reached.
+
+An XSS author is someone who writes a cross-site script exploiting an XSS vulnerability.
+
+URI specifications insist that extraneous characters be encoded, allowing easy recognizibility between data and delimitation. All extraneous characters will thus be encoded when being presented in this document.
+
+Part 1: Introduction
+
+Cross-site scripting (XSS) is a relatively old concept yet is in the news reguarly now and is more or less another buzzword. To fully understand XSS, one must have a good idea of both server-side WWW programming/scripting as well as
+client-side scripting. Under the right circumstances, XSS can appear complete out of client-side scripting, so it server-side scripting solely should not be held responsible.
+
+What exactly is XSS? The concept can actually be straightforward under the right circumstances. However, it can also be used for malicious intentions. There is a high chance that most people experienced with client-side programming have come across this idea in a non-malicious manner. It happens when you try to control or script events, behavior, parsing, etc., on a site that does not belong to you.
+
+"Top 100" sites and the like have no doubt tried to use XSS to get visitors to their site to vote unintentionally for them. This is, of course, a malicious behavior for which XSS is being implored. In fact, most intentions are malicious, which would explain the numerous attempts to mitigate XSS.
+
+-----------------------------------------------
+// URL to load to add "hit" to XSS author's website
+var url = 'http://www.topsites.com/vote.cgi?id=23'
+
+var objWindow = window.open(url,'foo')
+
+// Simple loop to add votes
+for (var i = 0; i < 10; i++)
+	objWindow.location.reload()
+-----------------------------------------------
+Figure 1: Using XSS In A "Top Sites" Scenario
+
+As previously mentioned, a thorough understanding of client-side scripting, preferably in JavaScript, will be required to understand most of what is actually going on behind XSS' scenes.
+
+You might ask why XSS is such a danger. These days, lots of data and resources can be controlled and manipulated through client-side scripting. It has gotten to the point where personal information and much more are available to client-side scripts. If an XSS author (someone who writes a cross-site script attack) is allowed to execute any code they see fit, perhaps on a site such as hotmail.com or amazon.com, or similiar sites, they could control other people's e-mail, online purchasing, and much more.
+
+To cast away any myths about XSS is an important goal here. If one does not fully understand XSS, they cannot fully understand the implications associated with runaway XSS attacks. Here's a graphical illustration of what's really happening when an XSS attack is in progress:
+
+-----------------------------------------------
+  +--------+                  +--------+
+  |  XSS   | --- Request ---> | Victim |
+  | Author |                  +--------+
+  +--------+                      |
+                                  |
+				 XSS
+				  |
+	+------------+		  |
+	| Amazon.com | <----------+
+        +------------+
+-----------------------------------------------
+Figure 2: XSS Attack
+
+As this portrait illustrates, interaction from the XSS author might occur in order for XSS to take place. An XSS author cannot affect you simplying by writing XSS code; it has to pass through your Web browser or similiar service.
+
+The parties at fault for XSS attacks include everyone. It is Amazon's bad WWW code that is letting the XSS author's XSS code through their Web site, and the victim's user fault for not recognizing. Some attacks can get a bit tricky, but in most cases, the victim user, armed with a small bit of knowledge, should be able to pick up on a potential XSS attack.
+
+This article is NOT saying that Amazon is vunerable to any XSS holes in particular, but is instead using Amazon as a popular Web site most Web surfers can relate to. It may contain a particular user's personal information and is thus a perfect example for demonstrating XSS concepts.
+
+Some attacks can be shielded to a degree with a few simple techniques on the XSS author's part. An example is setting up a Web page that executes the XSS attack instead of directly sending the XSS to the victim user.
+
+------------------------------------------------------
+      +--------+
+      |  XSS   | --- Direct request
+      | Author |     E.g., Load this page: 
+      +--------+     http://www.amazon.com/foo/page.html?var=%3Cscript%3Ealert%28%29
+                                   |
+				   |
+	      +--------+           |
+	      | Victim | <---------+
+	      +--------+
+------------------------------------------------------
+Figure 3: Direct XSS Attack
+
+------------------------------------------------------
+      +--------+
+      |  XSS   | --- Indirect request
+      | Author |     E.g., Load this page: 
+      +--------+     http://www.harmless.com/mypage.html
+                                   |
+				   |
+	      +--------+           |
+	+---- | Victim | <---------+
+	|     +--------+
+	|
+	|     +-----------------+
+	+---> | "Harmless" page | -+
+	      +-----------------+  |
+				   |
+	      +------------+	   |
+	      | Amazon.com | <-----+
+	      +------------+
+------------------------------------------------------
+Figure 3: Indirect XSS Attack
+
+Most XSS attacks can be performed either way. Some will required a direct or indirect attack. It simply depends on the nature of the XSS hole and how it is has been found to be carried out.
+
+Detail
+
+The most common XSS hole in circulation are results of not checking user input. A common example might be a search results page. To save potentially expensive computations, one may wish to split the results over an array of pages, with "next" and "previous" buttons or hyperlinks which navigate between the virtual result pages. The code for that might be:
+
+--------------------------------------------
+# Determine what page the user is currently on
+my $page = CGI::param('page') || 0;
+
+print "Showing page $page of $total pages";
+--------------------------------------------
+Figure 5: Simple XSS Hole
+
+If an XSS author requests the page http://site.com/search.php?page=<script>alert() he has successfully executed cross-site scripting. The fix here is quite easy: anything that is not a number, make it one. However, in this process, one will lose any sort of value which was requested. This may be adequate for a malicious request, but let's say the user didn't mean to enter invalid input -- now all of his or her input shall be lost.
+
+The situation can get more complex. Take for example a multi-page form, that is, a form which spans multiple pages. Of course, one wouldn't want to lose the information gathered in the early pages, so to correct this one would correctly use the <input type="hidden"> element which HTML provides.
+
+----------------------------------------------
+<form action="nextpage.cgi" method="post" enctype="application/x-www-form-urlencoded">
+	Name: <input type="text" name="username" />
+	<input type="submit" value="Next Page" />
+</form>
+-----------------------------------------------
+my $username = CGI::param('username') || "";
+
+print <<EOM;
+<form action="nextpage.cgi" method="post" enctype="application/x-www-form-urlencoded">
+	Age: <input type="text" name="age" />
+	<input type="hidden" name="username" value="$username" />
+	<input type="submit" value="Next Page" />
+</form>
+EOM
+-----------------------------------------------
+Figure 6: Common XSS Hole
+
+In this situation, all a user would have to do is enter the following as the `username' field value:
+
+	"><script>alert()
+
+Translating, the page will be written and look like this:
+
+--------------------------------------------------
+<form action="nextpage.cgi" method="post" enctype="application/x-www-form-urlencoded">
+	Age: <input type="text" name="age" />
+	<input type="hidden" name="username" value=""><script>alert()
+" />
+	<input type="submit" value="Next Page" />
+</form>
+--------------------------------------------------
+Figure 7: XSS Translation
+
+The key here is to never trust user input. All of it. Prepare for the worst.
+
+
+
+
+
+
+
+
+Plugging Techniques
+
+Almost all XSS holes are easily fixed -- simply encode any possible HTML entities a malicious user may try to enter. From another perspective, perhaps a reasonable user is trying to enter data with such character data in it, at the same point preventing him or her from doing so as the browser will try to interpret their inputted data directly instead of displaying (or handling in any way) the encoded, escaping representation of it.
+
+Most scripting, programming, etc. languages provide mechanisms from escaping HTML entities. PHP contains the function htmlEntities(), there are lots of modules in Perl which provide this functionality (one is the escapeHTML() method from CGI.pm), and so on.
+
+But things aren't always so easy as calling a built-in function. Sometimes one may wish to preserve rich representations of user-inputted data by allowing perhaps just a few HTML tags (namely, not the <script> tag). Letting some tags though and others can lead to serious headaches while thinking through and implementing viable routines which accomplish this. Some languages in the wild provide semantics referred to as regular expressions to help one achieve this goal.
+
+Other Topics
+
+XSS holes can also be completely implemented in client-side script code -- no (faulty) server-side code is always necessary. Take for instance the following code that perhaps might be included on an insecure page:
+
+-----------------------------------------------
+<script type="text/javascript">
+
+	eval(window.location.hash.replace(/^#/,''))
+
+</script>
+-----------------------------------------------
+Figure 6: Client-side XSS
+
+Such code can be taken advantage of by requesting the URL:
+
+	http://www.vulnsite.com/page.html#alert()
+
+This is an extreme case yet it illustrates the main example -- never trust user input. Every time you call eval() or something that will be indirectly evaluated, always prepare for the worst-case scenario. There are perfectly seeming normal situations in which one may wish to eval() perhaps dynamically-built code that may contain user input.

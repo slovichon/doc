@@ -1,0 +1,360 @@
+Overview
+
+There are many tutorials about which teach one how to make dynamic HTML menus. Most of them are designed
+for a particular platform, have poor designs or implementations, or just aren't plain cool. In no special
+sense should the following be regarded as such; it is nevertheless an attempt.
+
+Introduction
+
+This tutorial requires a substantial amount of knowledge of common Javascript and CSS. Many concepts
+will be explained along the way and are setup so to lessen any more requisities of complicated details
+based on these languages. We will start from a simple infrastructure and expand more and more until
+a solid, portable framework is obtained. So, without further ado...
+
+Politics
+
+Let's face it, nothing today exists without some level of politics. If one is into that sort of thing,
+then great, but it isn't always highly appreciated, at least by this author. Being besides the focus
+of this tutorial, it is however vital that some extraneous issues are addressed. Writing a portable
+dynamic HTML menu system from scratch will require the design and implemenation of unrelated modules
+of an abstract nature, so the current focus will be shifted to the attention of such.
+
+Browser
+
+A logical idea that strikes into the mind during the testing of compabilities of a user's Web browser
+is to call such a module to which it relates. We will construct a facility for determing a user's
+Web browser capabilities and call it Browser. Let us start with the basics.
+
+	function Browser()
+	{
+		return this
+	}
+
+Here is our template. In Javascript, custom objects can be created in a multitude of ways. For maintainability
+and cleanliness' sakes, we will do so in a verbose fashion.
+
+Now we'll construct a list of all the features of a Web browser that we may want to test for. To support
+and encourage the current standards of controlling Web page objects in Javascript, we will test support
+for the W3C's Document Object Model (Level 1) and tailor our dynamic menus around this feature. We will
+also try to support deprecated and even frowned-upon methods of accessing Web page elements for backwards
+compatibility and fun.
+
+Users of our modules (i.e., people who will use our APIs to create quick and dirty menu systems of their
+own) may want to put images in various spots of our menus, so we must create a facility for accessing
+images, in the expectancy that perhaps they will be dynamic (i.e., they may change during the various
+events which are inflicted to the Web page containing our menus).
+
+There have been various changes in the versions of CSS released and how exactly the intricate details
+of such a both specific yet broad language should be applied within the browser. For example, the
+following code will most certainly render differently when viewed with different browsers on different
+platforms:
+
+	div.block
+	{
+		border:1px striped gray;
+	}
+
+Each and every browser will try and render a striped pattern around our page division and thus create
+different images on every browser used to view our division. We will try and compensate anyway for
+some of these unfortunate details.
+
+When it comes to the nitty-gritty details, even for portability sanctions, we still must throw out
+generality as some browsers like to be so obscure, we have no other choice in the matter.
+
+Generalizing a bit, we must think every way a menu system might query the browser to obtain various
+pieces of information and make each and every piece available through our Browser class. For example,
+if a certain option specified which, while drawing our menu, always is asked to draw the menu on the
+screen regardless where the mouse pointer is relative to the edge of a screen, certain information 
+about the user's screen size must be obtained so that our drawing of the menu does not result in it
+being drawn outside of the viewable area. So there must be a way of obtaining the screen dimensions
+from our class, and there must also be ways to obtain the concurrent mouse coordinates at any given
+moment.
+
+Moving on the last considered topic, events, there must be a way we can respond when the user does
+something, say perform an action which should draw a menu. This action performed may correspond to an
+event being fired that we will specify to be made aware of when it so happens. Thus, the interaction
+between and menu and the user will be so.
+
+And for people using Microsoft Internet Explorer, we will add a few extra options to increase their
+experience (even though supporting features which are not standardized is bad, we'll do it for fun
+anyway).
+
+Let's see what we can conjure up thus far.
+
+	var browser = new Browser()
+	browser.hasDOM = (document.getElementById ? true : false)
+
+In this code, we assign to an undefined property of the Browser class. This is valid in Javascript,
+but since it is messy, we will later specify this property along with all others in our Browser
+class. For now, try to understand the functionality we're trying to achieve.
+
+The statement
+
+	browser.hasDOM = document.getElementById ? true : false
+
+makes use of the ternery operator (COND ? EXPR : EXPR). Testing document.getElementById -- that is
+a method of the document object -- will tell us if the user's browser has support for DOM, because
+the specifications of DOM (level 1) require that this function be defined (we'll find out later what
+it does). If it doesn't, our code will find another way to interact with our menu objects. If you
+thought about this however, shame on you. We're trying to keep these modules separated and independent,
+so the functionality of a menu system should not even be on your mind at this point.
+
+As previously mentioned, you can write to an undefined property of an object (this is, in fact, the
+only way you may specify values for properties of objects in Javascript). The same goes for trying
+to read the value of an undefined property. If an undefined property in Javascript is trying to be
+read, in Boolean context, it returns false. Thus, if no document.getElementById() function exists
+in the user's Web browser, browser.hasDOM will be assigned false. (In case you were wondering, the
+document object is almost certain to exist in the user's Web browser, if it supports Javascript to
+begin with. However, in the situation that doesn't, a read of a property on an undefined object
+will result in an error.)
+
+So now we can test if a user's browser support the W3C DOM. Let's try to organize this first before
+it gets messy:
+
+	function Browser()
+	{
+		this.hasDOM = document.getElementById
+
+		return this
+	}
+
+	var browser = new Browser()
+
+	if (browser.hasDOM)
+		window.alert('Your browser has DOM support.')
+
+Okay we added a few things, but the residual code remains. In our object declaration, we assign the
+hasDOM property of this (the object reference from inside the object declaration) the value of
+document.getElementById. This is somewhat cheap; it implies that we evaluate browser.hasDOM() in Boolean
+context, where browser is a instantiation of the Browser class, or else it will give us redundant
+functionality. For example, we will now be able to use browser.hasDOM(obj) in place of
+document.getElementById(obj), since the two refer to the same function. We will of course not use it
+so and require that always test browser.hasDOM() in Boolean context.
+
+Let's add some more.
+
+	function Browser()
+	{
+		this.hasDOM		= document.getElementById
+		this.hasLayers		= document.layers
+		this.hasDocumentAll	= document.all
+
+		this.hasImages	= document.images
+
+		/* For CSS incompatibilities */
+		this.cssSpace	= true
+
+		this.isIE	= navigator.appName == 'Microsoft Internet Explorer'
+		this.isNN	= navigator.appName == 'Netscape' &&
+					parseInt(navigator.appVersion) == 4
+	}
+
+Okay we added quite a bit this time. document.layers is what Netscape 4 uses to access objects in a
+Web page. document.all is what Microsoft Internet Explorer uses to access objects in version 4 (only)
+of its browser. document.images is a collection of the images on a concurrent page. Older browsers
+with weak Javascript support do not understand the notation of an image on the page being referred to
+as an object with modifiable properties (such as src, the URL of the image). It doesn't really make
+sense to accomodate older browsers which do not even support images (in the sense of an object model)
+if one thinks that we're making a dynamic HTML menu system, but one shouldn't be thinking this, as
+already stated. Browser is a class to test the features of a browser and nothing more. We can change
+this class in the future to add tests to probe new features of browsers, but as long as we keep
+the interface we are designing now, our menu system should work under a multitude of changes to our
+Browser class.
+
+Next is the cssSpace property, which is assumed to be true (hence it's true value). If a browser does
+not correctly adjust CSS spacing properties, this property must be turned off (with browser.cssSpace =
+false) so that application using the Browser API can handle its lack of support accordingly. We will
+cover this in greater detail later on.
+
+Specific browser tests of thereafter specified so that we may do deep probing (that we probably shouldn't
+be doing) just to make sure. We will make proper use of at least some of these seemingly unnecessary
+features shortly.
+
+Globals
+
+We now have a means in which to probe the existence of various browser features. We will now discuss
+global resources which should be required.
+
+In any program, global variables are a bad thing. It is good design to confine what you need to where
+you need it. This practice yields more well-designed code, efficiency, tendency to stray away from
+errors, and modularibility. However, there are still some instances when global variables either make
+it easy rather than more difficult or their existance helps the design achieve a more natural level.
+Instead of passing a Browser instance to every function our menu will access, it will be much simpler
+to create one such global and let everything be made aware of it.
+
+Is our Browser class so bad? Could you not see yourself using it in another application? One could
+create an instance of our class and use it in a variety of applications, each at the same time, our
+menu system being just one.
+
+So perhaps a global Browser instance is an okay idea. What else? After a little experience, it became
+rather blatant to the author to resolve an issue with the Netscape Navigator (4) browser, a few global
+variables should be defined in the realms of dealing with CSS incompabilities.
+
+The W3C guidelines, as well as many implementations of many browsers (just about every one which has
+basic support for CSS, except Navigator 4), uses the values `visible' and 'hidden' to denote the
+visibility of an object on a page. Navigator instead uses 'show' and 'hide' to denote this cases. So
+we shall create two variables, one which reflects each state, and adjust their values to correctly
+coincide with the user's browser:
+
+	var gBrowser = new Browser()
+
+	var kCSSVisibilityHide, kCSSVisibilityShow
+
+	if (gBrowser.isNN4)
+	{
+		kCSSVisibilityHide = 'hide'
+		kCSSVisibilityShow = 'show'
+	} else {
+		kCSSVisibilityHide = 'hidden'
+		kCSSVisibilityShow = 'visible'
+	}
+
+Now when assigning to an object's visibility state we can use these portable values which will quietly
+let the Navigator 4 browsers phase out.
+
+Next we'll add some global functions to make our job easier:
+
+	/*
+	 * getObj() - gets the document object from the object ID
+	 */
+	function getObj(name)
+	{
+		if (typeof name == 'object')
+			return name
+
+		var obj = null
+
+		if (gBrowser.hasDOM)
+			obj = document.getElementById(name)
+
+		else if (gBrowser.hasDocumentAll)
+			obj = document.all(name)
+
+		else if (gBrowser.hasLayers)
+			obj = document.layers[name]
+
+		return obj
+	}
+
+	/*
+	 * escapeHTML() - encodes HTML entities in a string
+	 */
+	function escapeHTML(str)
+	{
+		// The "bare essentials" should be good enough
+		// for now. This is in no way complete
+		
+		str = str.replace(/&/g,'&amp;')
+		str = str.replace(/</g,'&lt;')
+		str = str.replace(/>/g,'&gt;')
+		str = str.replace(/'/g,'&apos;')
+		str = str.replace(/"/g,'&quot;')
+
+		return str
+	}
+
+	function unescapeHTML(str)
+	{
+		str = str.replace(/&amp;/g,'&')
+		str = str.replace(/&lt;/g,'<')
+		str = str.replace(/&gt;/g,'>')
+		str = str.replace(/&apos;/g,"'")
+		str = str.replace(/&quot;/g,'"')
+		
+		return str
+	}
+
+	function getStyle(id,name)
+	{
+		// Get corresponding document object
+		var obj = getObj(id)
+	
+		if (obj && obj.currentStyle)
+			return eval("obj.style." + name)
+	
+		else if (obj && document.defaultView && document.defaultView.getCurrentStyle)
+			return document.defaultView.getCurrentStyle(id,'').getPropertyValue(name)
+	
+		else if (obj && obj.style)
+			return eval('obj.style.' + name)
+	
+		return null
+	}
+	
+	function changeStyle(id,name,value)
+	{
+		var obj = getObj(id)
+	
+		if (obj && obj.style)
+			// obj.style.NAME = 'VALUE' (value must be escaped)
+			eval("obj.style." + name + " = '" + addSlashes(value) + "'")
+	
+		return
+	}
+
+	/*
+	 * addSlashes() - Escapes special characters in Javascript
+	 */
+	function addSlashes(str)
+	{
+		return String(str).replace(/['"\\]/g,'\\' + RegExp.lastMatch)
+	}
+
+	/*
+	 * cloneArray() - clones an array
+	 *
+	 * Note: it would be a better idea to add this to the Array
+	 * prototype; but, in the case such as this:
+	 *
+	 *	for (i in arr)
+	 *		..
+	 *
+	 * the added method `clone' would be considered a member and
+	 * thus be used as an element for a loop iteration
+	 */
+	function cloneArray(arr)
+	{
+		var t = new Array()
+
+		for (var i in arr)
+			t[i] = arr[i]
+
+		return t
+	}
+
+	/*
+	 * cancelBubbles() - used to stop event "bubbling" or
+	 * propagation through a hierarchy of elements on the
+	 * page
+	 */
+	function cancelBubbles(e)
+	{
+		if (gBrowser.hasWndEvents())
+			window.event.cancelBubble = true
+	
+		else if (e.stopPropagation)
+			e.stopPropagation()
+	
+		return
+	}
+
+Most of these are self-expanatory and don't really fit well into a specific menu design, which
+is why we have choosen to add them into our globals list. Those that aren't self-explanatory
+will be discussed in greater detail later.
+
+We will have more to append to our globals list later when the time comes to explain such features.
+
+HTMLElement
+
+
+
+Valuable resources:
+
+Dynamic HTML - The Definitive Reference
+By Danny Goodman, O'Reilly and associates
+
+DHTML Web Magic
+By Jeff Royer
+
+Webmonkey
+http://www.webmonkey.com/
