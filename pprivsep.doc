@@ -4,9 +4,10 @@
 <doc>
 	<title>Personal Privilege Separation</title>
 	<sum>
-		With the acceptable of the long-term inevitibility of software
-		bugs and exploits, further prevention techniques must be
-		leveraged to order to secure data rather than continuing to
+		With the acception of the long-term inevitibility of having to
+		deal with software bugs and exploits, more incident prevention
+		techniques must be leveraged to order to secure data rather
+		than continuation of
 		fix explicit bugs.  There will always be bugs.  The solution
 		is not to find them all; that is more of a endless battle.
 		The proper solution is to combine a variety of techniques,
@@ -17,69 +18,48 @@
 	<sect>
 		<h>Overview</h>
 		<p>
-			Running many different applications, including many
-			that use network communication to perform their
-			functionality, all with the same privileges is not a
-			good idea.  It is done, however, because of the same
-			reasons that all security techniques are mitigated --
-			because it is convenient for the end user.  If such
-			a setup is both secure and convenient, a major barrier
-			towards reaching better security practice can be
-			surpassed.
+			Having all programs, including many that use network communication
+			to perform their functionality, all run with the same privileges,
+			where many do not need such privileges, can expose personal data
+			to a greater chance of being lost or unintentionally accessed.
+			This approach is practiced, however, for the same reasons that all
+			security techniques are mitigated -- because it is convenient for
+			the user.  On the other hand, if a setup exists that is both
+			secure and convenient for users, a major barrier towards reaching
+			better security practice can be surpassed.
 		</p>
 		<p>
-			One of the original, defining mottos of the Unix
-			culture was that of ``do one thing well.''  In fact,
-			that is why the name ``Unix'' was chosen after the
-			disaster that was Multics.  Over the years, the
-			defining strategies that made Unix what it has
-			become have become lax.  The intent of this
-			document is not to state what Unix is or isn't,
-			but rather to try and recapture some of definitive
-			Unix methodology and reapply it.
+			Traditional Unix mottos includes ``do one thing well'' and ``only
+			give as few privileges as are required to complete a task.''  Over
+			the years, these defining mottos that made Unix what it was have
+			become laxed.  The intent of this document is not to state what
+			Unix is or isn't, but instead to try and recapture some of
+			definitive Unix methodology and reapply it.
 		</p>
 		<p>
-			An ideal approach would allow only programs that
-			<sy>need</sy> to share files with other programs to
-			do so.  However, implementing such a strategy would
-			require a mechanism for maintainence the policy
-			rules of which program should access which files, and
-			which files should be allowed to be accessed with other
-			programs.  This would clearly be a mess, and is reserved
-			until another approach or an acceptable strategy is
-			derived
+			An ideal approach would allow only programs that <sy>need</sy> to
+			share files with other programs to do so.  However, implementing
+			such a strategy would require a mechanism for maintainence of the
+			policy rules of specifying which program should access which
+			files and which files should be allowed to be accessed by other
+			programs.  This would clearly be a mess, so this approach is
+			reserved until another approach or an alternative but acceptable
+			strategy is found.
 		</p>
 		<p>
-			The mechanism described here is to have two user
-			accounts instead of one per logical user.  Since many
-			personal computers and workstations have exclusively
-			one user or only a handful, the overhead of twice as
-			many user accounts should not be much.  The strategy
-			is to have one main account and another shadow account
-			where more risky programs intended to be run by the
-			user can be run in safer, or less impactful, environment.
+			The mechanism described here is to have two user accounts instead
+			of one per logical user.  The ``main'' account will replace the
+			traditional single account for trustworthy programs, and a new
+			``shadow'' account will be introduced for use by riskier programs
+			that do not need the full privileges of the ``main'' account, and
+			will instead be run in a safer, or less impactful, environment.
 		</p>
 		<p>
-			A parallel to this strategy is applied to many daemon
-			programs in the OpenBSD operating system.  For example,
-			instead of having all DHCP packet processing done as
-			root, the main DHCP daemon creates another process.
-			This child process changes its privileges to the shadow
-			DHCP account, which will let that process run as a
-			different user from that of the root account.
-			This is a very effective strategy:  only data from
-			the child is communicated back to the main DHCP
-			process, and only the main process needs to run
-			as root (writing to files in <path>/var</path>, or
-			listening on UDP port 68 sockets, for example) and conduct a
-			minimal set of operations.  If an error in the code
-			occurs, there is a greater chance that it will be
-			in the code run by the unprivileged process, rather
-			than by that of of the root process, which will
-			minimize the impact of the problem.
-		</p>
-		<p>
-			
+			Since many personal computers and workstations have exclusively
+			one or only a handful of users, the overhead of twice as many user
+			accounts should not be much.  This strategy will probably not work
+			on large machines with many users, but in that case, users will
+			hopefully keep backups of personal data on personal machines.
 		</p>
 	</sect>
 	<sect>
@@ -99,7 +79,7 @@ _jaredy:*:201:201:Jared J. Yanovich (privsep):/home/jaredy/.priv:/sbin/nologin
 			<p>
 				A group that both the main and shadow user need to be a part of
 				needs to be created as well.
-				The following is an excerpt from <path>/etc/group</path>.
+				The following is an excerpt from <path>/etc/group</path>:
 			</p>
 <pre>
 _jaredy:*:201:jaredy
@@ -115,7 +95,7 @@ jaredy _jaredy=(ALL) NOPASSWD: ALL
 </pre>
 			<p>
 				Remember to use the <tt>visudo(8)</tt> program when editing the
-				<path>sudoers</path> file.
+				<path>/etc/sudoers</path> file.
 			</p>
 			<p>
 				Next, permissions on the shadow home directory need to be set up.
@@ -127,13 +107,14 @@ jaredy _jaredy=(ALL) NOPASSWD: ALL
 </pre>
 			</p>
 			<p>
-				Finally, a program can be invoked through <tt>sudo(8)</tt>:
+				Finally, a program that will run under the shadow privileges can
+				be invoked through <tt>sudo(8)</tt>:
 			</p>
 <pre>
 $ env HOME=~/.priv sudo -u _${USER} mozilla "$@"
 </pre>
 			<p>
-				Or more generically, a wrapper can be made to invoke any program
+				Or, more generically, a wrapper can be made to invoke any program
 				through a <em>privilege wrapper</em>, such as
 				<path>~/bin/priv</path>:
 			</p>
@@ -147,7 +128,7 @@ exec env HOME=~/.priv sudo -u _$USER $prog "$@"
 </pre>
 			<p>
 				And now this script can be used to simplify the invocation of
-				programs that are to have privileges separated.
+				programs that are to have privileges isolated.
 				Here is a sample excerpt from <path>~/.fluxbox/menu</path> that
 				allows easy invocation of an IRC client:
 			</p>
@@ -156,5 +137,24 @@ exec env HOME=~/.priv sudo -u _$USER $prog "$@"
 	[exec] (irssi) {xterm -title irssi -e ~/bin/priv irssi &amp;}
 [end]
 </pre>
+			<p>
+				Likewise, here are some more samples from <tt>~/.bashrc</tt> that
+				ease invocation of such programs:
+			</p>
+<pre>
+alias gaim="~/bin/priv gaim"
+alias sylpheed="~/bin/priv sylpheed"
+alias xmms="~/bin/priv xmms"
+alias gkrellm="~/bin/priv gkrellm"
+</pre>
+			<p>
+				Many programs can not be configured to use this technique, but
+				those that can and are greatly reduce the chance of disaster
+				from spreading when something goes wrong, especially programs
+				like Mozilla where there is just too much code audit it all.
+				Program such as text editors and argubly mail clients may be
+				used for so much file I/O that it will probably be infeasible
+				to set them up in this manner.
+			</p>
 	</sect>
 </doc>
