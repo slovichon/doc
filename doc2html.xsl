@@ -2,7 +2,9 @@
 <!-- $Id$ -->
 
 <xsl:stylesheet version="1.0"
-	xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+	xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+	xmlns:util="http://projects.closeedge.net/kobsd/xsl/util">
+	<xsl:import href="util.xsl" />
 	<xsl:output method="text" />
 
 	<xsl:template match="doc">
@@ -14,6 +16,7 @@
 		<title>]]></xsl:text>
 		<xsl:value-of select="title" />
 		<xsl:text><![CDATA[</title>
+		<link rel="stylesheet" type="text/css" href="main.css" />
 	</head>
 	<body>
 ]]></xsl:text>
@@ -24,7 +27,7 @@
 ]]></xsl:text>
 	</xsl:template>
 
-	<xsl:template match="sum" />
+	<xsl:template match="sum|title" />
 
 	<xsl:template match="sect">
 		<xsl:apply-templates />
@@ -61,6 +64,15 @@
 		<xsl:text><![CDATA[</h3>]]></xsl:text>
 	</xsl:template>
 	
+	<xsl:template match="link">
+		<xsl:element name="a">
+			<xsl:attribute name="href">
+				<xsl:value-of select="@href" />
+			</xsl:attribute>
+			<xsl:apply-templates />
+		</xsl:element>
+	</xsl:template>
+
 	<xsl:template match="tt|path">
 		<xsl:text><![CDATA[<tt>]]></xsl:text>
 		<xsl:apply-templates />
@@ -68,6 +80,28 @@
 	</xsl:template>
 
 	<xsl:template match="text()">
-		<xsl:value-of select="." />
+		<xsl:call-template name="util:string-replace">
+			<xsl:with-param name="string">
+				<xsl:call-template name="util:string-replace">
+					<xsl:with-param name="string">
+						<xsl:call-template name="util:string-replace">
+							<xsl:with-param name="string">
+								<xsl:call-template name="util:string-replace">
+									<xsl:with-param name="string" select="." />
+									<xsl:with-param name="search" select="'--'" />
+									<xsl:with-param name="replacement" select="'&amp;mdash;'" />
+								</xsl:call-template>
+							</xsl:with-param>
+							<xsl:with-param name="search" select="'``'" />
+							<xsl:with-param name="replacement" select="'&amp;#8220;'" />
+						</xsl:call-template>
+					</xsl:with-param>
+					<xsl:with-param name="search" select="&quot;''&quot;" />
+					<xsl:with-param name="replacement" select="'&amp;#8221;'" />
+				</xsl:call-template>
+			</xsl:with-param>
+			<xsl:with-param name="search" select="&quot;'&quot;" />
+			<xsl:with-param name="replacement" select="'&amp;#8217;'" />
+		</xsl:call-template>
 	</xsl:template>
 </xsl:stylesheet>
